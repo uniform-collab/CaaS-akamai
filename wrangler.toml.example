@@ -1,0 +1,12 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "context-as-a-service"
+main = "src/index.ts"
+compatibility_date = "2023-12-18"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+UNIFORM_API_KEY = "uf1nmu7qge5pyw6fd2ly3ag3x9t6mkxeed37hfseps6yw6vl7l46hjs3k5cyzucl0deatw5tnluhmpxw40e48h75ksnd95ymc"
+UNIFORM_PROJECT_ID = "63ce97f9-2bf8-453b-931c-4732d7a37b4e"
+SEGMENT_API_KEY = ""
+SEGMENT_SPACE_ID = ""0
+NEXT_PUBLIC_ANALYTICS_WRITE_KEY = ""

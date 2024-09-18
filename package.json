@@ -1,0 +1,27 @@
+{
+	"name": "context-as-a-service",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "dotenv -- wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest",
+		"cf-typegen": "wrangler types",
+		"hmm": "wrangler -v",
+		"uniform:manifest": "uniform context manifest download --output ./src/context-manifest.json"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.4.5",
+		"@cloudflare/workers-types": "^4.20240620.0",
+		"dotenv-cli": "^7.4.2",
+		"typescript": "^5.4.5",
+		"vitest": "1.5.0",
+		"wrangler": "3.48.0"
+	},
+	"dependencies": {
+		"@uniformdev/canvas": "^19.165.0",
+		"@uniformdev/context": "^19.165.0",
+		"@uniformdev/cli": "19.165.0"
+	}
+}
