@@ -3,25 +3,35 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "dotenv -- wrangler dev",
-		"start": "wrangler dev",
-		"test": "vitest",
-		"cf-typegen": "wrangler types",
-		"hmm": "wrangler -v",
-		"uniform:manifest": "uniform context manifest download --output ./src/context-manifest.json"
+		"start": "rollup -c -w",
+		"build": "rollup -c && npm run build:bundle",
+		"build:bundle": "cp src/bundle.json dist/bundle.json",
+		"uniform:manifest": "uniform context manifest download --output ./src/context-manifest.json",
+		"akamai:deploy-ew": "akamai edgeworkers upload --codeDir ./dist <edgeworker-identifier>",
+		"akamai:activate-ew": "akamai edgeworkers activate <edgeworker-identifier> <network> <version-identifier>",
+		"tar": "tar -czf ./dist/caas-akamai.tgz -C ./dist bundle.json main.js",
+		"sandbox:add-ew": "akamai sandbox add-edgeworker <edgeworker-identifier> ./dist/caas-akamai.tgz",
+		"sandbox:update-ew": "akamai sandbox update-edgeworker <edgeworker-identifier> ./dist/caas-akamai.tgz",
+		"sandbox:deploy-ew": "npm run build && npm run tar && npm run sandbox:update-ew",
+		"sandbox:start": "akamai sandbox start --print-logs",
+		"sandbox:create": "akamai sandbox create --hostname <akamai-property-hostname> --name caas-demo-sanbox"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.4.5",
-		"@cloudflare/workers-types": "^4.20240620.0",
+		"@rollup/plugin-commonjs": "^28.0.2",
+		"@rollup/plugin-json": "^6.1.0",
+		"@rollup/plugin-node-resolve": "^16.0.0",
+		"@rollup/plugin-typescript": "^12.1.2",
+		"@types/akamai-edgeworkers": "^1.1.18",
+		"@types/md5": "^2.3.5",
+		"@uniformdev/cli": "20.3.1",
 		"dotenv-cli": "^7.4.2",
-		"typescript": "^5.4.5",
-		"vitest": "1.5.0",
-		"wrangler": "3.48.0"
+		"rollup": "^4.34.6",
+		"tar": "^7.4.3",
+		"typescript": "^5.4.5"
 	},
 	"dependencies": {
-		"@uniformdev/canvas": "^19.165.0",
-		"@uniformdev/context": "^19.165.0",
-		"@uniformdev/cli": "19.165.0"
+		"@uniformdev/canvas": "20.3.1",
+		"@uniformdev/context": "20.3.1",
+		"md5": "^2.3.0"
 	}
 }
