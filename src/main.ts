@@ -15,24 +15,6 @@ import { CANVAS_TEST_SLOT } from '@uniformdev/canvas';
 import { httpRequest } from 'http-request';
 import { logger } from 'log';
 
-
-declare namespace SegmentProfile {
-	interface SegmentData {
-		traits?: Record<string, string | number | boolean>;
-	}
-
-	interface OrderCompletedEvent {
-		products: string;
-		amount: number;
-		categories: string;
-	}
-
-	interface SelectProductEvent {
-		product: string;
-		categories: string;
-	}
-}
-
 export async function onClientRequest(request: EW.IngressClientRequest) {
 	try {
 		const projectId = request.getVariable('PMUSER_UNIFORM_PROJECTID');
@@ -150,7 +132,6 @@ const processComposition = async ({
 				const count = node.parameters?.['count'] as ComponentParameter<number | string>;
 
 				let parsedCount: number | undefined;
-
 				if (typeof count === 'string') {
 					parsedCount = parseInt(count, 10);
 				} else if (typeof count !== 'number') {
@@ -171,13 +152,24 @@ const processComposition = async ({
 					actions.remove();
 				} else {
 					const [first, ...rest] = variations;
+					
+					const cleanVariant = (variant: any) => {
+						const cleaned = { ...variant };
+						delete cleaned.pz;
+						delete cleaned.control;
+						delete cleaned.id;
+						if (cleaned.parameters) {
+							delete cleaned.parameters.$pzCrit;
+						}
+						return cleaned;
+					};
 
 					if (first) {
-						actions.replace(first);
+						actions.replace(cleanVariant(first));
 					}
 
 					if (rest.length) {
-						actions.insertAfter(rest);
+						actions.insertAfter(rest.map(cleanVariant));
 					}
 				}
 			} else if (node.type === CANVAS_TEST_TYPE) {

@@ -7,14 +7,14 @@
 		"build": "rollup -c && npm run build:bundle",
 		"build:bundle": "cp src/bundle.json dist/bundle.json",
 		"uniform:manifest": "uniform context manifest download --output ./src/context-manifest.json",
-		"akamai:deploy-ew": "akamai edgeworkers upload --codeDir ./dist <edgeworker-identifier>",
-		"akamai:activate-ew": "akamai edgeworkers activate <edgeworker-identifier> <network> <version-identifier>",
+		"akamai:deploy": "akamai edgeworkers upload --codeDir ./dist ${EW_ID:-80886}",
+		"akamai:activate": "akamai edgeworkers activate ${EW_ID:-80886} ${NETWORK:-production} ${VERSION:-3.1.3}",
 		"tar": "tar -czf ./dist/caas-akamai.tgz -C ./dist bundle.json main.js",
-		"sandbox:add-ew": "akamai sandbox add-edgeworker <edgeworker-identifier> ./dist/caas-akamai.tgz",
-		"sandbox:update-ew": "akamai sandbox update-edgeworker <edgeworker-identifier> ./dist/caas-akamai.tgz",
-		"sandbox:deploy-ew": "npm run build && npm run tar && npm run sandbox:update-ew",
-		"sandbox:start": "akamai sandbox start --print-logs",
-		"sandbox:create": "akamai sandbox create --hostname <akamai-property-hostname> --name caas-demo-sanbox"
+		"sandbox:deploy": "akamai sandbox add-edgeworker ${EW_ID:-80886} ./dist/caas-akamai.tgz",
+		"sandbox:update": "akamai sandbox update-edgeworker ${EW_ID:-80886} ./dist/caas-akamai.tgz",
+		"s:deploy": "npm run build && npm run tar && npm run sandbox:update",
+		"s:start": "akamai sandbox start --print-logs",
+		"s:create": "akamai sandbox create --hostname ${SANDBOX_HOSTNAME:-akamai-artemn.unfrm.uno} --name ${SANDBOX_NAME:-artem-caas-demo-v1}"
 	},
 	"devDependencies": {
 		"@rollup/plugin-commonjs": "^28.0.2",
