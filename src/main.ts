@@ -8,14 +8,15 @@ import {
 	mapSlotToPersonalizedVariations,
 	mapSlotToTestVariations,
 } from '@uniformdev/canvas';
-import { Context, ManifestV2 } from '@uniformdev/context';
+import { Context, ManifestV2, CookieTransitionDataStore, CookieTransitionDataStoreOptions } from '@uniformdev/context';
 import manifest from './context-manifest.json';
 import { walkNodeTree } from '@uniformdev/canvas';
 import { CANVAS_TEST_SLOT } from '@uniformdev/canvas';
 import { httpRequest } from 'http-request';
 import { logger } from 'log';
+import { createResponse } from 'create-response';
 
-export async function onClientRequest(request: EW.IngressClientRequest) {
+export async function responseProvider(request: EW.ResponseProviderRequest) {
 	try {
 		const projectId = request.getVariable('PMUSER_UNIFORM_PROJECTID');
 		const apiKey = request.getVariable('PMUSER_UNIFORM_API_KEY');
@@ -25,10 +26,10 @@ export async function onClientRequest(request: EW.IngressClientRequest) {
 		logger.log(`Debug: Original URL: ${request.url}`);
 
 		if (!projectId) {
-			return request.respondWith(500, { 'Content-Type': 'text/html' }, '<html><body><h1>ProjectId is undefined</h1></body></html>');
+			return createResponse(500, { 'Content-Type': 'text/html' }, '<html><body><h1>ProjectId is undefined</h1></body></html>');
 		}
 		if (!apiKey) {
-			return request.respondWith(500, { 'Content-Type': 'text/html' }, '<html><body><h1>ApiKey is undefined</h1></body></html>');
+			return createResponse(500, { 'Content-Type': 'text/html' }, '<html><body><h1>ApiKey is undefined</h1></body></html>');
 		}
 
 		// Parse URL manually
@@ -80,19 +81,22 @@ export async function onClientRequest(request: EW.IngressClientRequest) {
 			const route: RouteGetResponse = JSON.parse(responseText);
 			logger.log('Debug: Successfully parsed response JSON');
 
+			const cookieName = 'ufvd';
+
 			if (route.type === 'composition') {
 				await processComposition({
 					route,
 					quirks,
+					cookie: 'cookie'
 				});
 
-				return request.respondWith(200, { 'Content-Type': 'application/json' }, JSON.stringify(route));
+				return createResponse(200, { 'Content-Type': 'application/json' }, JSON.stringify(route));
 			}
 		}
 
 		// If we get here, something went wrong
 		logger.log(`Debug: Falling through to default response. Status: ${fetchResponse.status}`);
-		return request.respondWith(
+		return createResponse(
 			fetchResponse.status,
 			{ 'Content-Type': 'application/json' },
 			responseText
@@ -100,21 +104,30 @@ export async function onClientRequest(request: EW.IngressClientRequest) {
 
 	} catch (error) {
 		logger.log(`Debug: Error caught: ${error}`);
-		return request.respondWith(500, { 'Content-Type': 'text/html' }, `<html><body><h1>Internal Server Error: ${error}</h1></body></html>`);
+		return createResponse(500, { 'Content-Type': 'text/html' }, `<html><body><h1>Internal Server Error: ${error}</h1></body></html>`);
 	}
 }
 
 const processComposition = async ({
 	route,
 	quirks,
+	cookie
 }: {
 	route: RouteGetResponseComposition;
 	quirks: Record<string, string>;
+	cookie: string;
 }) => {
+
 	const context = new Context({
 		manifest: manifest as ManifestV2,
 		defaultConsent: true,
+		transitionStore: new CookieTransitionDataStore({
+			cookieName: 'ufvd',
+			serverCookieValue: 'cookie-value',
+		}),
 	});
+
+
 
 	await context.update({
 		quirks: {
@@ -142,17 +155,19 @@ const processComposition = async ({
 
 				const mapped = mapSlotToPersonalizedVariations(slot);
 
-				const { variations } = context.personalize({
+				const { variations, personalized } = context.personalize({
 					name: trackingEventName.value ?? 'Untitled Personalization',
 					variations: mapped,
 					take: parsedCount,
 				});
 
+				console.log('personalized', personalized);
+
 				if (!variations) {
 					actions.remove();
 				} else {
 					const [first, ...rest] = variations;
-					
+
 					const cleanVariant = (variant: any) => {
 						const cleaned = { ...variant };
 						delete cleaned.pz;

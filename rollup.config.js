@@ -10,5 +10,5 @@ export default {
 		format: 'es',
 	},
 	plugins: [typescript(), commonjs(), resolve(), json()],
-	external: ['http-request', 'log'],
+	external: ['http-request', 'log', 'create-response'],
 };
