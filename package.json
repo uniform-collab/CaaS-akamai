@@ -4,11 +4,12 @@
 	"private": true,
 	"scripts": {
 		"start": "rollup -c -w",
-		"build": "rollup -c && npm run build:bundle",
+		"clean": "rm -rf dist",
+		"build": "npm run clean && node scripts/increment-version.js && rollup -c && npm run build:bundle",
 		"build:bundle": "cp src/bundle.json dist/bundle.json",
 		"uniform:manifest": "uniform context manifest download --output ./src/context-manifest.json",
 		"akamai:deploy": "akamai edgeworkers upload --codeDir ./dist ${EW_ID:-80886}",
-		"akamai:activate": "akamai edgeworkers activate ${EW_ID:-80886} ${NETWORK:-production} ${VERSION:-3.1.4}",
+		"akamai:activate": "akamai edgeworkers activate 80886 production",
 		"tar": "tar -czf ./dist/caas-akamai.tgz -C ./dist bundle.json main.js",
 		"sandbox:deploy": "akamai sandbox add-edgeworker ${EW_ID:-80886} ./dist/caas-akamai.tgz",
 		"sandbox:update": "akamai sandbox update-edgeworker ${EW_ID:-80886} ./dist/caas-akamai.tgz",
@@ -23,15 +24,15 @@
 		"@rollup/plugin-typescript": "^12.1.2",
 		"@types/akamai-edgeworkers": "^1.1.18",
 		"@types/md5": "^2.3.5",
-		"@uniformdev/cli": "20.3.1",
+		"@uniformdev/cli": "20.9.0",
 		"dotenv-cli": "^7.4.2",
 		"rollup": "^4.34.6",
 		"tar": "^7.4.3",
 		"typescript": "^5.4.5"
 	},
 	"dependencies": {
-		"@uniformdev/canvas": "20.3.1",
-		"@uniformdev/context": "20.3.1",
+		"@uniformdev/canvas": "20.9.0",
+		"@uniformdev/context": "20.9.0",
 		"md5": "^2.3.0"
 	}
 }
