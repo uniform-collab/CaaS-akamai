@@ -53,7 +53,23 @@ export async function responseProvider(request: EW.ResponseProviderRequest) {
 			}
 		}
 
+		// Extract ufvd cookie value
+		const cookies = request.getHeader('Cookie') || [];
+		let ufvdCookieValue = '';
+		let quirkCookieValue = '';
+
+		for (const cookie of cookies) {
+			if (cookie.startsWith('ufvd=')) {
+				ufvdCookieValue = cookie.substring(5).split(';')[0];
+			} else if (cookie.startsWith('ufvdqk=')) {
+				quirkCookieValue = cookie.substring(7).split(';')[0];
+			}
+		}
+
 		logger.log('quirks', JSON.stringify(quirks));
+		logger.log('ufvd cookie', ufvdCookieValue);
+		logger.log('ufvdqk cookie', quirkCookieValue);
+
 		// Fetch the response and segment data concurrently
 		const requestOptions = {
 			headers: {
@@ -85,6 +101,8 @@ export async function responseProvider(request: EW.ResponseProviderRequest) {
 				await processComposition({
 					route,
 					quirks,
+					cookieValue: ufvdCookieValue,
+					quirkCookieValue,
 				});
 
 				return createResponse(200, { 'Content-Type': 'application/json' }, JSON.stringify(route));
@@ -100,15 +118,30 @@ export async function responseProvider(request: EW.ResponseProviderRequest) {
 	}
 }
 
-const processComposition = async ({ route, quirks }: { route: RouteGetResponseComposition; quirks: Record<string, string> }) => {
+const processComposition = async ({
+	route,
+	quirks,
+	cookieValue,
+	quirkCookieValue,
+}: {
+	route: RouteGetResponseComposition;
+	quirks: Record<string, string>;
+	cookieValue?: string;
+	quirkCookieValue?: string;
+}) => {
 	const context = new Context({
 		manifest: manifest as ManifestV2,
 		defaultConsent: true,
 		transitionStore: new CookieTransitionDataStore({
 			cookieName: 'ufvd',
+			serverCookieValue: cookieValue,
+			quirkCookieName: 'ufvdqk',
+			quirkCookieValue: quirkCookieValue,
+			experimental_quirksEnabled: true,
 		}),
 	});
-	//logger.log('quirks inside process composition', JSON.stringify(quirks));
+	//logger.log('quirks inside process composition', JSON.stringify(context.quirks));
+	//logger.log('scores inside process composition', JSON.stringify(context.scores));
 
 	await context.update({
 		quirks: {
