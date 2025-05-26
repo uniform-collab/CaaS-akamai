@@ -54,21 +54,22 @@ export async function responseProvider(request: EW.ResponseProviderRequest) {
 		}
 
 		// Extract ufvd cookie value
-		const cookies = request.getHeader('Cookie') || [];
+		const cookieHeader = request.getHeader('Cookie')?.[0] || '';
 		let ufvdCookieValue = '';
 		let quirkCookieValue = '';
 
+		// Split the cookies string into individual cookies
+		const cookies = cookieHeader.split(';').map((cookie) => cookie.trim());
+
+		// Extract values from individual cookies
 		for (const cookie of cookies) {
+			logger.log('individual cookie', cookie);
 			if (cookie.startsWith('ufvd=')) {
-				ufvdCookieValue = cookie.substring(5).split(';')[0];
+				ufvdCookieValue = cookie.substring(5);
 			} else if (cookie.startsWith('ufvdqk=')) {
-				quirkCookieValue = cookie.substring(7).split(';')[0];
+				quirkCookieValue = cookie.substring(7);
 			}
 		}
-
-		logger.log('quirks', JSON.stringify(quirks));
-		logger.log('ufvd cookie', ufvdCookieValue);
-		logger.log('ufvdqk cookie', quirkCookieValue);
 
 		// Fetch the response and segment data concurrently
 		const requestOptions = {
