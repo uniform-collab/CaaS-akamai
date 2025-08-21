@@ -103,7 +103,7 @@ export async function responseProvider(request: EW.ResponseProviderRequest) {
 					route,
 					quirks,
 					cookieValue: ufvdCookieValue,
-					quirkCookieValue,
+					quirkCookieValue: quirkCookieValue,
 				});
 
 				return createResponse(200, { 'Content-Type': 'application/json' }, JSON.stringify(route));
@@ -119,7 +119,7 @@ export async function responseProvider(request: EW.ResponseProviderRequest) {
 	}
 }
 
-const processComposition = async ({
+export const processComposition = async ({
 	route,
 	quirks,
 	cookieValue,
@@ -141,16 +141,12 @@ const processComposition = async ({
 			experimental_quirksEnabled: true,
 		}),
 	});
-	//logger.log('quirks inside process composition', JSON.stringify(context.quirks));
-	//logger.log('scores inside process composition', JSON.stringify(context.scores));
 
 	await context.update({
 		quirks: {
 			...quirks,
 		},
 	});
-
-	//logger.log('context scores:', JSON.stringify(context.scores));
 
 	walkNodeTree(route.compositionApiResponse.composition, async (treeNode) => {
 		if (treeNode.type === 'component') {
@@ -186,7 +182,10 @@ const processComposition = async ({
 
 				logger.log('personalized', personalized);
 
-				if (!variations) {
+				// Fix: Check if personalization actually found a match
+				// When algorithm finds no match, personalized will be false
+				// even if variations array is populated (which was the bug)
+				if (!variations || !personalized) {
 					actions.remove();
 				} else {
 					const [first, ...rest] = variations;
@@ -223,7 +222,19 @@ const processComposition = async ({
 				if (!result) {
 					actions.remove();
 				} else {
-					actions.replace(result);
+					// Clean up test system properties
+					const cleanTestVariant = (variant: any) => {
+						const cleaned = { ...variant };
+						if (cleaned.parameters) {
+							delete cleaned.parameters.$tstVrnt;
+						}
+						// Also remove test-specific metadata
+						delete cleaned.id;
+						delete cleaned.testDistribution;
+						return cleaned;
+					};
+
+					actions.replace(cleanTestVariant(result));
 				}
 			}
 		}
