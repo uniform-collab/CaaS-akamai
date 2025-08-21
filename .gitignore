@@ -154,6 +154,9 @@ dist
 
 .tern-port
 
+# VS Code config
+.vscode/
+
 # Stores VSCode versions used for testing VSCode extensions
 
 .vscode-test
@@ -170,3 +173,12 @@ dist
 
 .dev.vars
 .wrangler/
+
+# Jest
+
+.jest/
+
+# Jest
+
+.jest/
+tests/.DS_Store
