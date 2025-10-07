@@ -44,6 +44,7 @@ describe('processComposition Integration Tests', () => {
 				},
 				"slots": {
 					"content": [
+						//TD slot
 						{
 							"type": "$personalization",
 							"slots": {
@@ -123,6 +124,7 @@ describe('processComposition Integration Tests', () => {
 								}
 							}
 						},
+						//TDND slot
 						{
 							"type": "$personalization",
 							"slots": {
@@ -209,6 +211,7 @@ describe('processComposition Integration Tests', () => {
 								}
 							}
 						},
+						//SSC slot
 						{
 							"type": "$personalization",
 							"slots": {
@@ -269,10 +272,61 @@ describe('processComposition Integration Tests', () => {
 								},
 								"trackingEventName": {
 									"type": "text",
-									"value": "Personalization with SSC"
+									"value": "Personalization with SSCWD"
 								}
 							}
 						},
+						//SSCWD slot
+						{
+							"type": "$personalization",
+							"slots": {
+								"pz": [
+									{
+										"type": "hero",
+										"parameters": {
+											"title": {
+												"type": "text",
+												"value": "SSCWD: Hero for Developer"
+											},
+											"$pzCrit": {
+												"type": "$pzCrit",
+												"value": {
+													"dim": "isdevelopersignal",
+													"name": "SSCWD:Developer"
+												}
+											}
+										}
+									},
+									{
+										"type": "hero",
+										"parameters": {
+											"title": {
+												"type": "text",
+												"value": "SSCWD: Hero for Marketer"
+											},
+											"$pzCrit": {
+												"type": "$pzCrit",
+												"value": {
+													"dim": "ismarketersignal",
+													"name": "SSCWD:Marketer"
+												}
+											}
+										}
+									},
+								]
+							},
+							"parameters": {
+								"algorithm": {
+									"type": "pzAlgorithm",
+									"value": "ssc"
+								},
+								"trackingEventName": {
+									"type": "text",
+									"value": "Personalization with SSCWD"
+								}
+							}
+						},
+						//test slot
 						{
 							"type": "$test",
 							"slots": {
@@ -458,6 +512,48 @@ describe('processComposition Integration Tests', () => {
 			expect((contentSlot[0] as any).id).toBeUndefined();
 		});
 	});
+	describe('SSCWD Personalization', () => {
+		it('should replace SSCWD personalization with empty array"', async () => {
+
+			const noMatchQuirks = { role: 'designer' }; // Won't match any criteria
+			const noMatchCookie = 'isdevelopersignal-5!ismarketersignal-5'; // Both signals below threshold
+
+			// Create payload with only SSC personalization
+
+
+			const sscwdPayload = {
+				type: "composition" as const,
+				matchedRoute: "/",
+				dynamicInputs: {},
+				compositionApiResponse: {
+					composition: {
+						...comprehensivePayload.compositionApiResponse.composition,
+						slots: {
+							content: [comprehensivePayload.compositionApiResponse.composition.slots!.content[3]] // Only SSCWD personalization
+						}
+					},
+					projectId: "a3ccbf9a-f51d-4022-8e2f-3dd31d6cde9a",
+					state: 64,
+					created: "2025-02-17T23:59:39.080481+00:00",
+					modified: "2025-08-21T14:55:02.875463+00:00",
+					pattern: false
+				}
+			};
+
+			await processComposition({
+				route: sscwdPayload,
+				quirks: noMatchQuirks,
+				cookieValue: noMatchCookie,
+				quirkCookieValue: '',
+			});
+
+			const contentSlot = sscwdPayload.compositionApiResponse.composition.slots.content;
+
+			
+			// Should be replaced with the developer hero using SSC algorithm
+			expect(contentSlot).toHaveLength(0);
+		});
+	});
 
 	describe('A/B Testing', () => {
 		it('should replace test with selected variant Hero Test var 1', async () => {
@@ -470,7 +566,7 @@ describe('processComposition Integration Tests', () => {
 					composition: {
 						...comprehensivePayload.compositionApiResponse.composition,
 						slots: {
-							content: [comprehensivePayload.compositionApiResponse.composition.slots!.content[3]] // Only A/B test
+							content: [comprehensivePayload.compositionApiResponse.composition.slots!.content[4]] // Only A/B test
 						}
 					},
 					projectId: "a3ccbf9a-f51d-4022-8e2f-3dd31d6cde9a",

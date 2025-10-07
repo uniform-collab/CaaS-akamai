@@ -180,12 +180,12 @@ export const processComposition = async ({
 					algorithm: algorithm?.value,
 				});
 
-				logger.log('personalized', personalized);
 
 				// Fix: Check if personalization actually found a match
 				// When algorithm finds no match, personalized will be false
 				// even if variations array is populated (which was the bug)
-				if (!variations || !personalized) {
+
+				if (variations.length===0) {
 					actions.remove();
 				} else {
 					const [first, ...rest] = variations;
