@@ -1,0 +1,52 @@
+{
+	"project": {
+		"id": "test-project",
+		"pz": {
+			"control": 0,
+			"sig": {
+				"isdevelopersignal": {
+					"str": 50,
+					"cap": 50,
+					"dur": "p",
+					"crit": {
+						"type": "G",
+						"op": "&",
+						"clauses": [
+							{
+								"type": "QK",
+								"key": "role",
+								"match": {
+									"op": "=",
+									"rhs": "developer"
+								}
+							}
+						]
+					}
+				},
+				"ismarketersignal": {
+					"str": 50,
+					"cap": 50,
+					"dur": "p",
+					"crit": {
+						"type": "G",
+						"op": "&",
+						"clauses": [
+							{
+								"type": "QK",
+								"key": "role",
+								"match": {
+									"op": "=",
+									"rhs": "marketer"
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		"test": {
+			"mytest": {},
+			"mytest2": {}
+		}
+	}
+}

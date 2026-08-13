@@ -11,6 +11,7 @@ module.exports = {
 		'^log$': '<rootDir>/tests/__mocks__/log.js',
 		'^http-request$': '<rootDir>/tests/__mocks__/http-request.js',
 		'^create-response$': '<rootDir>/tests/__mocks__/create-response.js',
+		'context-manifest\\.json$': '<rootDir>/tests/fixtures/context-manifest.json',
 	},
 	setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
 	collectCoverageFrom: [
