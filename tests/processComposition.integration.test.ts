@@ -382,7 +382,9 @@ describe('processComposition Integration Tests', () => {
 		}
 	};
 
-
+	const tdPersonalizationNode = JSON.parse(
+		JSON.stringify(comprehensivePayload.compositionApiResponse.composition.slots!.content[0])
+	);
 
 	describe('Top-Down Personalization', () => {
 		it('should replace TD personalization with "TD: Hero For Developers"', async () => {
@@ -624,7 +626,7 @@ describe('processComposition Integration Tests', () => {
 	});
 
 	describe('Client POST visitor body (no CDP cookie injection)', () => {
-		it('personalizes from client-supplied quirks and scores instead of ufvd cookies', async () => {
+		it('personalizes from client-supplied quirks instead of ufvd cookies', async () => {
 			const tdPayload = {
 				type: 'composition' as const,
 				matchedRoute: '/',
@@ -633,7 +635,7 @@ describe('processComposition Integration Tests', () => {
 					composition: {
 						...comprehensivePayload.compositionApiResponse.composition,
 						slots: {
-							content: [comprehensivePayload.compositionApiResponse.composition.slots!.content[0]],
+							content: [JSON.parse(JSON.stringify(tdPersonalizationNode))],
 						},
 					},
 					projectId: 'a3ccbf9a-f51d-4022-8e2f-3dd31d6cde9a',
@@ -647,7 +649,42 @@ describe('processComposition Integration Tests', () => {
 			const identity = visitorFromClientPayload({
 				quirks: { role: 'developer' },
 				device: { os: 'ios' },
-				scores: { isdevelopersignal: 10 },
+			});
+
+			await processComposition({
+				route: tdPayload,
+				quirks: identity.quirks,
+				cookieValue: identity.cookieValue,
+				quirkCookieValue: identity.quirkCookieValue,
+			});
+
+			const contentSlot = tdPayload.compositionApiResponse.composition.slots.content;
+			expect(contentSlot).toHaveLength(1);
+			expect(contentSlot[0].parameters?.title?.value).toBe('TD: Hero For Developers');
+		});
+
+		it('personalizes from client-supplied scores without quirk or cookie injection', async () => {
+			const tdPayload = {
+				type: 'composition' as const,
+				matchedRoute: '/',
+				dynamicInputs: {},
+				compositionApiResponse: {
+					composition: {
+						...comprehensivePayload.compositionApiResponse.composition,
+						slots: {
+							content: [JSON.parse(JSON.stringify(tdPersonalizationNode))],
+						},
+					},
+					projectId: 'a3ccbf9a-f51d-4022-8e2f-3dd31d6cde9a',
+					state: 64,
+					created: '2025-02-17T23:59:39.080481+00:00',
+					modified: '2025-08-21T14:55:02.875463+00:00',
+					pattern: false,
+				},
+			};
+
+			const identity = visitorFromClientPayload({
+				scores: { isdevelopersignal: 50 },
 			});
 
 			await processComposition({

@@ -1,7 +1,6 @@
 import {
 	emptyVisitorData,
 	serializeCookie,
-	serializeQuirks,
 	type EnrichmentData,
 	type EventData,
 	type Quirks,
@@ -94,17 +93,20 @@ export function visitorFromClientPayload(payload: ClientVisitorPayload): Resolve
 
 	const visitorData = {
 		...emptyVisitorData(),
-		quirks,
+		quirks: {},
 		scores: payload.scores ?? {},
 		sessionScores: payload.sessionScores ?? {},
 		tests: payload.tests ?? {},
+		controlGroup: false,
 	};
 
 	return {
 		source: 'client-body',
 		quirks,
+		// Scores/tests use the ufvd cookie encoding. Quirks stay off the quirk
+		// cookie so context.update() sees them as new and signal criteria run.
 		cookieValue: serializeCookie(visitorData),
-		quirkCookieValue: serializeQuirks(quirks),
+		quirkCookieValue: '',
 		enrichments: payload.enrichments,
 		events: payload.events,
 	};

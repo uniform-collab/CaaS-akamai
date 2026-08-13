@@ -87,7 +87,14 @@ export async function responseProvider(request: EW.ResponseProviderRequest) {
 					events: identity.events,
 				});
 
-				return createResponse(200, { 'Content-Type': 'application/json' }, JSON.stringify(route));
+				return createResponse(
+					200,
+					{
+						'Content-Type': 'application/json',
+						'x-uniform-visitor-source': identity.source,
+					},
+					JSON.stringify(route)
+				);
 			}
 		}
 

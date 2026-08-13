@@ -76,4 +76,4 @@ await fetch(`${ewHost}/api/v1/route?path=/`, {
 });
 ```
 
-An empty POST body falls back to cookies and `x-quirk-*` headers. A non-empty POST body is the source of truth and ignores injected cookies/headers.
+An empty POST body falls back to cookies and `x-quirk-*` headers. A non-empty POST body is the source of truth and ignores injected cookies/headers. Successful responses include `x-uniform-visitor-source: client-body` or `cookies` so you can see which path ran.

@@ -61,9 +61,8 @@ describe('visitorFromClientPayload', () => {
 		const decoded = parseScoreCookie(identity.cookieValue, identity.quirkCookieValue);
 		expect(decoded?.scores?.isdevelopersignal).toBe(10);
 		expect(decoded?.tests?.mytest).toBe('var1');
-		expect(decoded?.quirks?.role).toBe('developer');
 		expect(identity.cookieValue.length).toBeGreaterThan(0);
-		expect(identity.quirkCookieValue.length).toBeGreaterThan(0);
+		expect(identity.quirkCookieValue).toBe('');
 	});
 
 	it('flattens device attributes into quirks without overwriting explicit quirks', () => {
@@ -97,7 +96,7 @@ describe('resolveVisitorIdentity', () => {
 		expect(result.identity.source).toBe('client-body');
 		expect(result.identity.quirks).toEqual({ role: 'developer' });
 		expect(result.identity.cookieValue).not.toContain('ismarketersignal');
-		expect(parseScoreCookie(result.identity.cookieValue)?.scores.isdevelopersignal).toBe(10);
+		expect(parseScoreCookie(result.identity.cookieValue)?.scores?.isdevelopersignal).toBe(10);
 	});
 
 	it('falls back to cookies and x-quirk-* headers for GET', async () => {
