@@ -8,22 +8,26 @@ import {
 	mapSlotToPersonalizedVariations,
 	mapSlotToTestVariations,
 } from '@uniformdev/canvas';
-import { Context, ManifestV2, CookieTransitionDataStore, CookieTransitionDataStoreOptions } from '@uniformdev/context';
+import {
+	Context,
+	ManifestV2,
+	CookieTransitionDataStore,
+	type EnrichmentData,
+	type EventData,
+	type Quirks,
+} from '@uniformdev/context';
 import manifest from './context-manifest.json';
 import { walkNodeTree } from '@uniformdev/canvas';
 import { CANVAS_TEST_SLOT } from '@uniformdev/canvas';
 import { httpRequest } from 'http-request';
 import { logger } from 'log';
 import { createResponse } from 'create-response';
+import { resolveVisitorIdentity } from './visitorPayload';
 
 export async function responseProvider(request: EW.ResponseProviderRequest) {
 	try {
 		const projectId = request.getVariable('PMUSER_UNIFORM_PROJECTID');
 		const apiKey = request.getVariable('PMUSER_UNIFORM_API_KEY');
-
-		//	logger.log('Debug: Starting request processing');
-		//	logger.log(`Debug: ProjectId: ${projectId}`);
-		//	logger.log(`Debug: Original URL: ${request.url}`);
 
 		if (!projectId) {
 			return createResponse(500, { 'Content-Type': 'text/html' }, '<html><body><h1>ProjectId is undefined</h1></body></html>');
@@ -32,46 +36,26 @@ export async function responseProvider(request: EW.ResponseProviderRequest) {
 			return createResponse(500, { 'Content-Type': 'text/html' }, '<html><body><h1>ApiKey is undefined</h1></body></html>');
 		}
 
-		// Parse URL manually
+		const visitorResult = await resolveVisitorIdentity(request);
+		if (!visitorResult.ok) {
+			return createResponse(visitorResult.status, { 'Content-Type': 'application/json' }, JSON.stringify({ error: visitorResult.message }));
+		}
+
+		const { identity } = visitorResult;
+
+		if (identity.source === 'cookies') {
+			const cookieHeader = request.getHeader('Cookie')?.[0] || '';
+			const cookies = cookieHeader.split(';').map((cookie) => cookie.trim());
+			for (const cookie of cookies) {
+				logger.log('individual cookie', cookie);
+			}
+		}
+
 		const originalUrl = request.url;
-		//	logger.log(`Debug: Original URL: ${originalUrl}`);
 		const [path, search] = originalUrl.split('?');
-
-		// Construct URL with explicit protocol and hostname
 		const uniformUrl = `https://uniform.global${path}?${search}`;
-		//	logger.log(`Debug: Uniform URL: ${uniformUrl}`);
 
-		// Extract quirks from headers
-		const quirks: Record<string, string> = {};
-		const headers = request.getHeaders();
-		for (const headerName in headers) {
-			if (headerName.startsWith('x-quirk-')) {
-				const headerValue = headers[headerName];
-				if (headerValue && headerValue.length > 0) {
-					quirks[headerName.replace('x-quirk-', '')] = headerValue[0];
-				}
-			}
-		}
-
-		// Extract ufvd cookie value
-		const cookieHeader = request.getHeader('Cookie')?.[0] || '';
-		let ufvdCookieValue = '';
-		let quirkCookieValue = '';
-
-		// Split the cookies string into individual cookies
-		const cookies = cookieHeader.split(';').map((cookie) => cookie.trim());
-
-		// Extract values from individual cookies
-		for (const cookie of cookies) {
-			logger.log('individual cookie', cookie);
-			if (cookie.startsWith('ufvd=')) {
-				ufvdCookieValue = cookie.substring(5);
-			} else if (cookie.startsWith('ufvdqk=')) {
-				quirkCookieValue = cookie.substring(7);
-			}
-		}
-
-		// Fetch the response and segment data concurrently
+		// Outbound fetch stays GET so Property Manager can cache the Uniform composition.
 		const requestOptions = {
 			headers: {
 				'x-api-key': apiKey,
@@ -84,37 +68,38 @@ export async function responseProvider(request: EW.ResponseProviderRequest) {
 			timeout: 5000,
 		};
 
-		//	logger.log('Debug: Sending request to Uniform');
 		const fetchResponse = await httpRequest(uniformUrl, {
 			...requestOptions,
 		});
-		//	logger.log(`Debug: Response status: ${fetchResponse.status}`);
 
 		const responseText = await fetchResponse.text();
-		//	logger.log(`Debug: Response body: ${responseText}`);
 
-		// Check if response is OK and URL is valid
 		if (fetchResponse.ok && path.toLowerCase() === '/api/v1/route') {
 			const route: RouteGetResponse = JSON.parse(responseText);
-			//	logger.log('Debug: Successfully parsed response JSON');
 
 			if (route.type === 'composition') {
 				await processComposition({
 					route,
-					quirks,
-					cookieValue: ufvdCookieValue,
-					quirkCookieValue: quirkCookieValue,
+					quirks: identity.quirks,
+					cookieValue: identity.cookieValue,
+					quirkCookieValue: identity.quirkCookieValue,
+					enrichments: identity.enrichments,
+					events: identity.events,
 				});
 
-				return createResponse(200, { 'Content-Type': 'application/json' }, JSON.stringify(route));
+				return createResponse(
+					200,
+					{
+						'Content-Type': 'application/json',
+						'x-uniform-visitor-source': identity.source,
+					},
+					JSON.stringify(route)
+				);
 			}
 		}
 
-		// If we get here, something went wrong
-		//logger.log(`Debug: Falling through to default response. Status: ${fetchResponse.status}`);
 		return createResponse(fetchResponse.status, { 'Content-Type': 'application/json' }, responseText);
 	} catch (error) {
-		//logger.log(`Debug: Error caught: ${error}`);
 		return createResponse(500, { 'Content-Type': 'text/html' }, `<html><body><h1>Internal Server Error: ${error}</h1></body></html>`);
 	}
 }
@@ -124,11 +109,15 @@ export const processComposition = async ({
 	quirks,
 	cookieValue,
 	quirkCookieValue,
+	enrichments,
+	events,
 }: {
 	route: RouteGetResponseComposition;
-	quirks: Record<string, string>;
+	quirks: Quirks;
 	cookieValue?: string;
 	quirkCookieValue?: string;
+	enrichments?: EnrichmentData[];
+	events?: EventData[];
 }) => {
 	const context = new Context({
 		manifest: manifest as ManifestV2,
@@ -142,11 +131,19 @@ export const processComposition = async ({
 		}),
 	});
 
-	await context.update({
+	const update: { quirks: Quirks; enrichments?: EnrichmentData[]; events?: EventData[] } = {
 		quirks: {
 			...quirks,
 		},
-	});
+	};
+	if (enrichments?.length) {
+		update.enrichments = enrichments;
+	}
+	if (events?.length) {
+		update.events = events;
+	}
+
+	await context.update(update);
 
 	walkNodeTree(route.compositionApiResponse.composition, async (treeNode) => {
 		if (treeNode.type === 'component') {
@@ -173,19 +170,14 @@ export const processComposition = async ({
 
 				const mapped = mapSlotToPersonalizedVariations(slot);
 
-				const { variations, personalized } = context.personalize({
+				const { variations } = context.personalize({
 					name: trackingEventName.value ?? 'Untitled Personalization',
 					variations: mapped,
 					take: parsedCount,
 					algorithm: algorithm?.value,
 				});
 
-
-				// Fix: Check if personalization actually found a match
-				// When algorithm finds no match, personalized will be false
-				// even if variations array is populated (which was the bug)
-
-				if (variations.length===0) {
+				if (variations.length === 0) {
 					actions.remove();
 				} else {
 					const [first, ...rest] = variations;
@@ -222,13 +214,11 @@ export const processComposition = async ({
 				if (!result) {
 					actions.remove();
 				} else {
-					// Clean up test system properties
 					const cleanTestVariant = (variant: any) => {
 						const cleaned = { ...variant };
 						if (cleaned.parameters) {
 							delete cleaned.parameters.$tstVrnt;
 						}
-						// Also remove test-specific metadata
 						delete cleaned.id;
 						delete cleaned.testDistribution;
 						return cleaned;
